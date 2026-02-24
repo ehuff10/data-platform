@@ -18,31 +18,18 @@ Everything runs with:
 ```
 docker compose up --build
 ```
-
 No local dependency setup required.
-
----
-
 ## Why I Built It
-
 Most data projects stop at a notebook.
-
 I wanted to understand:
-
 - How incremental ingestion actually works  
 - How production pipelines avoid duplicate data  
 - How metadata tables are used in real systems  
 - How orchestration tools like Airflow fit into the picture  
 - How to make everything reproducible with containers  
-
 This project is my attempt at building those patterns intentionally.
-
----
-
 ## Architecture Overview
-
 The system includes:
-
 - FastAPI → mock operational data source  
 - ETL service → ingestion logic + quality checks  
 - Postgres → warehouse + metadata store  
@@ -51,48 +38,29 @@ The system includes:
 
 High-level data flow:
 
-```
 API → ETL → Bronze (raw files) → Postgres Staging
                               ↑
                        Airflow Scheduler
-```
-
----
 
 ## What Makes This Production-Style
-
 A few design decisions I intentionally implemented:
-
 ### Incremental Loading
-
 The pipeline uses a watermark stored in `metadata.ingestion_state`.  
 Each run only processes new records.
-
 ### Idempotent Upserts
-
 If the pipeline runs twice, it does not duplicate rows.
-
 ### Metadata Tracking
-
 Every run is recorded in `metadata.pipeline_runs` with:
-
 - run_id  
 - status  
 - row_count  
 - timestamps  
 - error message (if any)  
-
 ### Quality Gating
-
 If validation checks fail, the run fails instead of silently inserting bad data.
-
 ### Reproducibility
-
 Everything is containerized.  
 If someone clones this repo, they can stand up the entire platform with Docker.
-
----
-
 ## How to Run
 
 Clone the repository:
@@ -119,9 +87,6 @@ To manually trigger ingestion:
 ```
 ./scripts/run_ingest_api.sh
 ```
-
----
-
 ## Project Structure
 
 ```
@@ -135,4 +100,5 @@ postgres/
 airflow/
 docker-compose.yml
 ```
+
 
