@@ -1,0 +1,113 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: loanpulse-postgres
+    environment:
+      POSTGRES_USER: loanpulse
+      POSTGRES_PASSWORD: loanpulse_pw
+      POSTGRES_DB: loanpulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loanpulse -d loanpulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./services/api
+    container_name: loanpulse-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  airflow-init:
+    image: apache/airflow:2.9.3
+    container_name: loanpulse-airflow-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://loanpulse:loanpulse_pw@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+      PYTHONPATH: /opt/airflow
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./src:/opt/airflow/src
+      - ./requirements-etl.txt:/opt/airflow/requirements-etl.txt
+    command:
+      [
+        "bash",
+        "-c",
+        "airflow db migrate && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true"
+      ]
+
+  airflow-webserver:
+    image: apache/airflow:2.9.3
+    container_name: loanpulse-airflow-webserver
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://loanpulse:loanpulse_pw@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+      PYTHONPATH: /opt/airflow
+      POSTGRES_USER: loanpulse
+      POSTGRES_PASSWORD: loanpulse_pw
+      POSTGRES_DB: loanpulse
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      API_BASE_URL: http://api:8000
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./src:/opt/airflow/src
+      - ./requirements-etl.txt:/opt/airflow/requirements-etl.txt
+    command: ["bash", "-c", "pip install -r /opt/airflow/requirements-etl.txt && airflow webserver"]
+
+  airflow-scheduler:
+    image: apache/airflow:2.9.3
+    container_name: loanpulse-airflow-scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://loanpulse:loanpulse_pw@postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      PYTHONPATH: /opt/airflow
+      POSTGRES_USER: loanpulse
+      POSTGRES_PASSWORD: loanpulse_pw
+      POSTGRES_DB: loanpulse
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      API_BASE_URL: http://api:8000
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./src:/opt/airflow/src
+      - ./requirements-etl.txt:/opt/airflow/requirements-etl.txt
+    command: ["bash", "-c", "pip install -r /opt/airflow/requirements-etl.txt && airflow scheduler"]
+
+volumes:
+  postgres_data:
