@@ -1,4 +1,4 @@
-# LoanPulse Data Platform
+# Loan Data Platform
 
 This project is a small but realistic data platform built from scratch using Docker, Postgres, FastAPI, and Airflow.
 
@@ -100,5 +100,6 @@ postgres/
 airflow/
 docker-compose.yml
 ```
+
 
 
