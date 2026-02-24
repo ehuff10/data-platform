@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+
+# Data
+data/incoming/
+data/raw/
+data/processed/
+
+# Airflow
+airflow/logs/
+airflow/plugins/__pycache__/
+
+# dbt (later)
+dbt/target/
+dbt/logs/
